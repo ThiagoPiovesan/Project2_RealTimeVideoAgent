@@ -5,5 +5,7 @@ description = "Real Time Video Analysis Agent"
 readme = "README.md"
 requires-python = ">=3.12"
 dependencies = [
+    "dotenv>=0.9.9",
+    "langchain-google-genai>=4.2.0",
     "ultralytics>=8.4.0",
 ]

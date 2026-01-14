@@ -1,9 +1,18 @@
-from collections import defaultdict
-
+import sys
 import cv2
+import time
 import numpy as np
+import concurrent.futures
 
 from ultralytics import YOLO
+from collections import defaultdict
+from pathlib import Path
+
+# Add agent module to the path
+sys.path.append(str(Path(__file__).resolve().parent.parent))
+from agent.video_analytic_agent import VideoAnalyticAgent
+
+video_agent = VideoAnalyticAgent()
 
 # Load the YOLO26 model
 model = YOLO("../model/yolo26s.pt")
@@ -14,6 +23,7 @@ cap = cv2.VideoCapture(video_path)
 
 # Store the track history
 track_history = defaultdict(lambda: [])
+track_time = defaultdict(lambda: [])
 
 # Loop through the video frames
 while cap.isOpened():
@@ -35,12 +45,21 @@ while cap.isOpened():
             # Plot the tracks
             for box, track_id in zip(boxes, track_ids):
                 x, y, w, h = box
+                current_time = time.time()
+                # if track_id not in track_time or (current_time - track_time[track_id]) > 5:
+                if track_id not in track_time:
+                    track_time[track_id] = current_time
                 
-                if track_id not in track_history:
-                    # TODO: Send the image and infomration to the LLM agent for 5 seconds
-                    
-                    pass
+                if (current_time - track_time[track_id]) > 5:
+                    track_time[track_id] = current_time
+                    with concurrent.futures.ThreadPoolExecutor(max_workers=3) as executor:
+                        future1 = executor.submit(video_agent.analyze_video_frame, frame, box, track_id)
 
+                        result1 = future1.result()
+                        
+                        print(f"Result 1: {result1}")
+                        
+                # Update the track history
                 track = track_history[track_id]
                 track.append((float(x), float(y)))  # x, y center point
                 if len(track) > 30:  # retain 30 tracks for 30 frames
